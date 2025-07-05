@@ -17,7 +17,7 @@ app.add_middleware(
 )
 
 # Load YOLO model
-model_path = "/Users/parthivsharma/Documents/GitHub/PCB-Fault-Detector/best.pt"
+model_path = "C:/Users/DELL/Documents/GitHub/PCB-Fault-Detector/best.pt"
 model = YOLO(model_path)
 
 @app.get("/")
