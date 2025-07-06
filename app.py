@@ -7,17 +7,17 @@ import uuid
 
 app = FastAPI()
 
-# CORS settings
+# Allow CORS from frontend (Vite server)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],  # adjust if needed
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Load YOLO model
-model_path = "C:/Users/DELL/Documents/GitHub/PCB-Fault-Detector/best.pt"
+model_path = "/Users/parthivsharma/runs/detect/train/weights/best.pt"  # change if needed
 model = YOLO(model_path)
 
 @app.get("/")
@@ -26,11 +26,11 @@ def read_root():
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
-    # Validate image type
+    # Validate uploaded file
     if not file.content_type.startswith("image/"):
         return {"error": "File must be an image."}
 
-    # Save uploaded file temporarily
+    # Save uploaded image
     filename = f"{uuid.uuid4().hex}_{file.filename}"
     input_dir = "uploaded_images"
     os.makedirs(input_dir, exist_ok=True)
@@ -39,7 +39,20 @@ async def predict(file: UploadFile = File(...)):
     with open(input_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # Predict using YOLO
+    # Clean previous prediction output
+    output_dir = "runs/detect/predict"
+    if os.path.exists(output_dir):
+        for f in os.listdir(output_dir):
+            path = os.path.join(output_dir, f)
+            try:
+                if os.path.isfile(path) or os.path.islink(path):
+                    os.remove(path)
+                elif os.path.isdir(path):
+                    shutil.rmtree(path)
+            except Exception as e:
+                print(f"❌ Error removing {path}: {e}")
+
+    # Run YOLO prediction
     results = model.predict(
         source=input_path,
         save=True,
@@ -48,14 +61,17 @@ async def predict(file: UploadFile = File(...)):
         imgsz=640
     )
 
-    # Log predictions to terminal
-    for result in results:
-        for box in result.boxes:
-            cls_id = int(box.cls[0])
-            class_name = results[0].names[cls_id]
-            conf = round(float(box.conf[0]), 2)
-            print(f"🟢 Detected: {class_name} ({conf})")
+    # Prepare detection results
+    results_list = []
+    if results and len(results[0].boxes) > 0:
+        class_id = int(results[0].boxes.cls[0])
+        label = results[0].names[class_id]
+        confidence = float(results[0].boxes.conf[0])
+        results_list.append({
+            "label": label,
+            "confidence": confidence
+        })
 
     return {
-        "message": "Prediction complete. Results saved in 'runs/detect/predict'."
+        "results": results_list
     }

@@ -1,0 +1,9 @@
+{
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "css.lint.unknownAtRules": "ignore",
+  "editor.formatOnSave": true,
+  "path-intellisense.mappings": {
+    "@": "${workspaceFolder}/src"
+  }
+}
