@@ -61,9 +61,7 @@ const App = () => {
                 PCB Fault Detection System
               </h1>
             </div>
-            <p className="text-slate-400 mt-1">
-              Powered by YOLOv8 & FastAPI
-            </p>
+            {/* Removed "Powered by YOLOv8 & FastAPI" from here */}
           </div>
         </div>
       </header>
@@ -133,6 +131,12 @@ const App = () => {
           </Card>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="text-center text-sm text-slate-500 pb-4">
+        Powered by <span className="text-yellow-400">YOLOv8</span> &{" "}
+        <span className="text-blue-400">FastAPI</span>
+      </footer>
     </div>
   );
 };
