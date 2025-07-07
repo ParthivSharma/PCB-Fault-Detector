@@ -11,18 +11,24 @@ import {
 import ImageUpload from "@/components/ImageUpload";
 import DetectionResults from "@/components/DetectionResults";
 
+interface Detection {
+  label: string;
+  confidence: number;
+  bbox: [number, number, number, number];
+}
+
 const App = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [detectionResults, setDetectionResults] = useState<
-    { label: string; confidence: number }[] | null
-  >(null);
+  const [detectionResults, setDetectionResults] = useState<Detection[] | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [imageDims, setImageDims] = useState<{ width: number; height: number } | null>(null); // ✅
 
   const handleImageUpload = (file: File, previewUrl: string) => {
     setUploadedFile(file);
     setImagePreview(previewUrl);
     setDetectionResults(null);
+    setImageDims(null);
   };
 
   const handleAnalyze = async () => {
@@ -40,6 +46,10 @@ const App = () => {
 
       const result = await response.json();
       setDetectionResults(result.results);
+      setImageDims({
+        width: result.original_width,
+        height: result.original_height,
+      });
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -83,44 +93,50 @@ const App = () => {
               <ImageUpload onImageUpload={handleImageUpload} />
 
               {imagePreview && (
-                <div className="mt-6 py-4">
-                  <img
-                    src={imagePreview}
-                    alt="Uploaded Preview"
-                    className="w-[180px] h-[180px] object-contain rounded border border-slate-600 mx-auto my-6 block"
-                  />
+                  <div className="mt-6 space-y-6">
+                    {/* 🖼️ Image Preview */}
+                    <div className="flex justify-center">
+                      <img
+                        src={imagePreview}
+                        alt="Uploaded preview"
+                        style={{ width: "120px", height: "auto" }}
+                        className="rounded shadow border border-slate-700"
+                      />
+                    </div>
 
-                  <Button
-                    onClick={handleAnalyze}
-                    disabled={isAnalyzing}
-                    className="w-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2"
-                  >
-                    {isAnalyzing && (
-                      <svg
-                        className="animate-spin h-5 w-5 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                        />
-                      </svg>
-                    )}
-                    {isAnalyzing ? "Analyzing..." : "Analyze PCB"}
-                  </Button>
-                </div>
-              )}
+                    {/* 🔍 Analyze Button */}
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={isAnalyzing}
+                      className="w-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      {isAnalyzing && (
+                        <svg
+                          className="animate-spin h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          />
+                        </svg>
+                      )}
+                      {isAnalyzing ? "Analyzing..." : "Analyze PCB"}
+                    </Button>
+                  </div>
+                )}
+
             </CardContent>
           </Card>
 
@@ -139,6 +155,9 @@ const App = () => {
               <DetectionResults
                 results={detectionResults}
                 isAnalyzing={isAnalyzing}
+                imageUrl={imagePreview}
+                originalWidth={imageDims?.width}
+                originalHeight={imageDims?.height}
               />
             </CardContent>
           </Card>

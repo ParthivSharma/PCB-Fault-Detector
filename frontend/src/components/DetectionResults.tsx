@@ -1,13 +1,26 @@
 import React from "react";
+import FaultOverlayImage from "./FaultOverlayImage";
+
+interface DetectionResult {
+  label: string;
+  confidence: number;
+  bbox?: [number, number, number, number]; // optional here
+}
 
 interface DetectionResultsProps {
-  results: { label: string; confidence: number }[] | null;
+  results: DetectionResult[] | null;
   isAnalyzing: boolean;
+  imageUrl: string | null;
+  originalWidth?: number;
+  originalHeight?: number;
 }
 
 const DetectionResults: React.FC<DetectionResultsProps> = ({
   results,
   isAnalyzing,
+  imageUrl,
+  originalWidth,
+  originalHeight,
 }) => {
   if (!results && !isAnalyzing) return null;
 
@@ -25,31 +38,43 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
         </p>
       )}
 
-      {/* 🔴 Fault Alert */}
       {results && results.length > 0 && (
-        <div className="bg-red-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-red-400 
-                        transition-all duration-300 ease-out opacity-100 translate-y-0 animate-fade-slide">
+        <div className="bg-red-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-red-400 transition-all duration-300">
           ⚠ Faults detected in the PCB!
         </div>
       )}
 
-      {/* ✅ All Clear Alert */}
       {!isAnalyzing && results && results.length === 0 && (
-        <div className="bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-green-400 
-                        transition-all duration-300 ease-out opacity-100 translate-y-0 animate-fade-slide">
+        <div className="bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-green-400 transition-all duration-300">
           ✅ All clear — No faults found. You're good to go!
         </div>
       )}
 
-      {/* Results */}
+      {/* 🖼️ Image with Fault Boxes */}
+      {results && results.length > 0 && imageUrl && originalWidth && originalHeight && (
+        <div className="flex justify-center">
+          <FaultOverlayImage
+            imageUrl={imageUrl}
+            results={results.filter(
+              (r): r is {
+                label: string;
+                confidence: number;
+                bbox: [number, number, number, number];
+              } => r.bbox !== undefined
+            )}
+            originalWidth={originalWidth}
+            originalHeight={originalHeight}
+          />
+        </div>
+      )}
+
+      {/* 📊 Confidence Bars */}
       {results && results.length > 0 && (
         <div className="space-y-4">
           {results.map((result, index) => (
             <div key={index}>
               <p className="text-base text-white font-medium mb-1">
-                <span className="text-blue-400 font-semibold">
-                  {result.label}
-                </span>{" "}
+                <span className="text-blue-400 font-semibold">{result.label}</span>{" "}
                 ({(result.confidence * 100).toFixed(1)}%)
               </p>
               <div className="w-full bg-slate-800 rounded-full h-3 group relative">

@@ -4,20 +4,22 @@ from ultralytics import YOLO
 import shutil
 import os
 import uuid
+from fastapi.responses import JSONResponse
+from PIL import Image  # ✅ For getting image dimensions
 
 app = FastAPI()
 
 # Allow CORS from frontend (Vite server)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # adjust if needed
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Load YOLO model
-model_path = "/Users/parthivsharma/runs/detect/train/weights/best.pt"  # change if needed
+model_path = "/Users/parthivsharma/runs/detect/train/weights/best.pt"
 model = YOLO(model_path)
 
 @app.get("/")
@@ -26,11 +28,9 @@ def read_root():
 
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
-    # Validate uploaded file
     if not file.content_type.startswith("image/"):
-        return {"error": "File must be an image."}
+        return JSONResponse(content={"error": "File must be an image."}, status_code=400)
 
-    # Save uploaded image
     filename = f"{uuid.uuid4().hex}_{file.filename}"
     input_dir = "uploaded_images"
     os.makedirs(input_dir, exist_ok=True)
@@ -38,6 +38,10 @@ async def predict(file: UploadFile = File(...)):
 
     with open(input_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+    # ✅ Get original image dimensions
+    with Image.open(input_path) as img:
+        original_width, original_height = img.size
 
     # Clean previous prediction output
     output_dir = "runs/detect/predict"
@@ -61,17 +65,23 @@ async def predict(file: UploadFile = File(...)):
         imgsz=640
     )
 
-    # Prepare detection results
+    # Extract predictions
     results_list = []
-    if results and len(results[0].boxes) > 0:
-        class_id = int(results[0].boxes.cls[0])
-        label = results[0].names[class_id]
-        confidence = float(results[0].boxes.conf[0])
-        results_list.append({
-            "label": label,
-            "confidence": confidence
-        })
+    if results and results[0].boxes is not None:
+        for box in results[0].boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+            class_id = int(box.cls[0])
+            label = model.names[class_id]
+            confidence = float(box.conf[0])
+            results_list.append({
+                "label": label,
+                "confidence": confidence,
+                "bbox": [x1, y1, x2 - x1, y2 - y1]
+            })
 
-    return {
-        "results": results_list
-    }
+    # ✅ Include original image dimensions in response
+    return JSONResponse(content={
+        "results": results_list,
+        "original_width": original_width,
+        "original_height": original_height
+    })
