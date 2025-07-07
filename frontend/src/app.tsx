@@ -61,7 +61,6 @@ const App = () => {
                 PCB Fault Detection System
               </h1>
             </div>
-            {/* Removed "Powered by YOLOv8 & FastAPI" from here */}
           </div>
         </div>
       </header>
@@ -80,30 +79,44 @@ const App = () => {
                 Upload an image of your PCB to detect potential faults
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6 pb-10 px-4">
               <ImageUpload onImageUpload={handleImageUpload} />
 
               {imagePreview && (
-                <div className="mt-6">
+                <div className="mt-6 py-4">
                   <img
                     src={imagePreview}
                     alt="Uploaded Preview"
-                    style={{
-                      width: "180px",
-                      height: "180px",
-                      objectFit: "contain",
-                      borderRadius: "6px",
-                      border: "1px solid #475569",
-                      display: "block",
-                      margin: "0 auto 1rem",
-                    }}
+                    className="w-[180px] h-[180px] object-contain rounded border border-slate-600 mx-auto my-6 block"
                   />
 
                   <Button
                     onClick={handleAnalyze}
                     disabled={isAnalyzing}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2"
                   >
+                    {isAnalyzing && (
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                    )}
                     {isAnalyzing ? "Analyzing..." : "Analyze PCB"}
                   </Button>
                 </div>
