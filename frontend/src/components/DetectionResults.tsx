@@ -13,6 +13,8 @@ interface DetectionResultsProps {
   imageUrl: string | null;
   originalWidth?: number;
   originalHeight?: number;
+  isFaulty?: boolean;
+  missingComponents?: string[];
 }
 
 const DetectionResults: React.FC<DetectionResultsProps> = ({
@@ -21,6 +23,8 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
   imageUrl,
   originalWidth,
   originalHeight,
+  isFaulty,
+  missingComponents = [],
 }) => {
   if (!results && !isAnalyzing) return null;
 
@@ -38,15 +42,25 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
         </p>
       )}
 
-      {results && results.length > 0 && (
+      {!isAnalyzing && isFaulty && (
         <div className="bg-red-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-red-400 transition-all duration-300">
           ⚠ Faults detected in the PCB!
+          {missingComponents.length > 0 && (
+            <div className="mt-2 text-sm font-normal text-white">
+              Missing Components:
+              <ul className="list-disc list-inside mt-1 text-left">
+                {missingComponents.map((component, index) => (
+                  <li key={index}>{component}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
-      {!isAnalyzing && results && results.length === 0 && (
+      {!isAnalyzing && !isFaulty && (
         <div className="bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-green-400 transition-all duration-300">
-          ✅ All clear — No faults found. You're good to go!
+          ✅ All components are present. No faults detected.
         </div>
       )}
 
