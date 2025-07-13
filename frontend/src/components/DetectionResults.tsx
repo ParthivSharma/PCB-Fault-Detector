@@ -1,10 +1,11 @@
 import React from "react";
 import FaultOverlayImage from "./FaultOverlayImage";
+import { AlertCircle } from "lucide-react";
 
 interface DetectionResult {
   label: string;
   confidence: number;
-  bbox?: [number, number, number, number]; // optional here
+  bbox?: [number, number, number, number];
 }
 
 interface DetectionResultsProps {
@@ -15,6 +16,7 @@ interface DetectionResultsProps {
   originalHeight?: number;
   isFaulty?: boolean;
   missingComponents?: string[];
+  mode: "upload" | "live";
 }
 
 const DetectionResults: React.FC<DetectionResultsProps> = ({
@@ -25,14 +27,26 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
   originalHeight,
   isFaulty,
   missingComponents = [],
+  mode,
 }) => {
-  if (!results && !isAnalyzing) return null;
-
   const getBarColor = (confidence: number) => {
     if (confidence >= 0.75) return "bg-green-500";
     if (confidence >= 0.5) return "bg-yellow-500";
     return "bg-red-500";
   };
+
+  if (!isAnalyzing && (!results || results.length === 0)) {
+    return (
+      <div className="text-slate-400 text-center py-10 flex flex-col items-center space-y-2">
+        <AlertCircle className="w-12 h-12 text-slate-500" />
+        <p>
+          {mode === "upload"
+            ? "No detection results yet. Upload an image and click Analyze PCB to see results."
+            : "No detection results yet. Point your camera at a PCB to detect faults in real-time."}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 mt-6 w-full max-w-xl mx-auto text-center">
@@ -46,9 +60,9 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
         <div className="bg-red-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-red-400 transition-all duration-300">
           ⚠ Faults detected in the PCB!
           {missingComponents.length > 0 && (
-            <div className="mt-2 text-sm font-normal text-white">
+            <div className="mt-2 text-sm font-normal text-white text-left">
               Missing Components:
-              <ul className="list-disc list-inside mt-1 text-left">
+              <ul className="list-disc list-inside mt-1">
                 {missingComponents.map((component, index) => (
                   <li key={index}>{component}</li>
                 ))}
@@ -58,13 +72,12 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
         </div>
       )}
 
-      {!isAnalyzing && !isFaulty && (
+      {!isAnalyzing && isFaulty === false && (
         <div className="bg-green-600 text-white font-semibold py-2 px-4 rounded-md shadow-md border border-green-400 transition-all duration-300">
           ✅ All components are present. No faults detected.
         </div>
       )}
 
-      {/* 🖼️ Image with Fault Boxes */}
       {results && results.length > 0 && imageUrl && originalWidth && originalHeight && (
         <div className="flex justify-center">
           <FaultOverlayImage
@@ -82,7 +95,6 @@ const DetectionResults: React.FC<DetectionResultsProps> = ({
         </div>
       )}
 
-      {/* 📊 Confidence Bars */}
       {results && results.length > 0 && (
         <div className="space-y-4">
           {results.map((result, index) => (

@@ -80,17 +80,14 @@ const App = () => {
                 PCB Fault Detection System
               </h1>
             </div>
+            <p className="mt-2 text-slate-300 text-sm">
+              Upload a PCB image or use live detection to find missing or faulty components.
+            </p>
 
-            {/* Mode Switcher */}
             <div className="mt-4 flex gap-4">
               <Button
-                variant={mode === "upload" ? "default" : "outline"}
-                onClick={() => setMode("upload")}
-              >
-                <Upload className="w-4 h-4 mr-1" /> Upload Image
-              </Button>
-              <Button
-                variant={mode === "live" ? "default" : "outline"}
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
                 onClick={() => setMode("live")}
               >
                 <Camera className="w-4 h-4 mr-1" /> Live Detection
@@ -100,10 +97,8 @@ const App = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex justify-center px-4 py-8 min-h-[calc(100vh-96px)]">
         <div className="grid lg:grid-cols-2 gap-8 w-full max-w-6xl">
-          {/* Input Section */}
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -165,12 +160,12 @@ const App = () => {
                 </>
               ) : (
                 <CameraCapture
-                  onResults={(results, previewUrl, dims) => {
+                  onResults={(results, previewUrl, dims, isFaultyResult, missing) => {
                     setDetectionResults(results);
                     setImagePreview(previewUrl);
                     setImageDims(dims);
-                    setIsFaulty(undefined);
-                    setMissingComponents([]);
+                    setIsFaulty(isFaultyResult);
+                    setMissingComponents(missing);
                   }}
                   isAnalyzing={isAnalyzing}
                   setIsAnalyzing={setIsAnalyzing}
@@ -179,7 +174,6 @@ const App = () => {
             </CardContent>
           </Card>
 
-          {/* Results Section */}
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
@@ -191,21 +185,34 @@ const App = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <DetectionResults
-                results={detectionResults}
-                isAnalyzing={isAnalyzing}
-                imageUrl={imagePreview}
-                originalWidth={imageDims?.width}
-                originalHeight={imageDims?.height}
-                isFaulty={isFaulty}
-                missingComponents={missingComponents}
-              />
+              {detectionResults ? (
+                <DetectionResults
+                  results={detectionResults}
+                  isAnalyzing={isAnalyzing}
+                  imageUrl={imagePreview}
+                  originalWidth={imageDims?.width}
+                  originalHeight={imageDims?.height}
+                  isFaulty={isFaulty}
+                  missingComponents={missingComponents}
+                />
+              ) : (
+                <div className="text-slate-400 text-center py-10">
+                  {mode === "upload" ? (
+                    <>
+                      No detection results yet. Upload a PCB image and click <strong>Analyze PCB</strong> to see results.
+                    </>
+                  ) : (
+                    <>
+                      No detection results yet. Point your camera at a PCB to start detecting.
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="text-center text-sm text-slate-500 pb-4">
         Powered by <span className="text-yellow-400">YOLOv8</span> &{" "}
         <span className="text-blue-400">FastAPI</span>

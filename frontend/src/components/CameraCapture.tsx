@@ -11,7 +11,9 @@ interface CameraCaptureProps {
   onResults: (
     results: Detection[],
     previewUrl: string,
-    dims: { width: number; height: number }
+    dims: { width: number; height: number },
+    isFaulty: boolean,
+    missingComponents: string[]
   ) => void;
   isAnalyzing: boolean;
   setIsAnalyzing: React.Dispatch<React.SetStateAction<boolean>>;
@@ -76,10 +78,16 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         // Create a preview URL for captured frame
         const previewUrl = URL.createObjectURL(blob);
 
-        onResults(result.results, previewUrl, {
-          width: result.original_width,
-          height: result.original_height,
-        });
+        onResults(
+          result.results,
+          previewUrl,
+          {
+            width: result.original_width,
+            height: result.original_height,
+          },
+          result.is_faulty,
+          result.missing_components || []
+        );
       } catch (err) {
         console.error("Error during frame analysis:", err);
       } finally {
