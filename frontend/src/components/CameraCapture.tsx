@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 interface Detection {
@@ -15,19 +15,15 @@ interface CameraCaptureProps {
     isFaulty: boolean,
     missingComponents: string[]
   ) => void;
-  isAnalyzing: boolean;
-  setIsAnalyzing: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const CameraCapture: React.FC<CameraCaptureProps> = ({
-  onResults,
-  isAnalyzing,
-  setIsAnalyzing,
-}) => {
+const CameraCapture: React.FC<CameraCaptureProps> = ({ onResults }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Start webcam on mount
   useEffect(() => {
     const startCamera = async () => {
       try {
@@ -41,31 +37,33 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
     };
 
     startCamera();
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   const captureAndAnalyze = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
+    setIsAnalyzing(true);
 
-    // Set canvas size to match video
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    // Draw video frame to canvas
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Convert canvas to blob
     canvas.toBlob(async (blob) => {
       if (!blob) return;
 
       const formData = new FormData();
       formData.append("file", blob, "frame.jpg");
-
-      setIsAnalyzing(true);
 
       try {
         const response = await fetch("http://localhost:8000/analyze-frame", {
@@ -74,8 +72,6 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         });
 
         const result = await response.json();
-
-        // Create a preview URL for captured frame
         const previewUrl = URL.createObjectURL(blob);
 
         onResults(
@@ -88,12 +84,29 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
           result.is_faulty,
           result.missing_components || []
         );
-      } catch (err) {
-        console.error("Error during frame analysis:", err);
+      } catch (error) {
+        console.error("Error during analysis:", error);
       } finally {
         setIsAnalyzing(false);
       }
     }, "image/jpeg");
+  };
+
+  const toggleLiveMode = () => {
+    if (liveMode) {
+      // Stop live detection
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+      setLiveMode(false);
+    } else {
+      // Start live detection every 2 seconds
+      intervalRef.current = setInterval(() => {
+        if (!isAnalyzing) {
+          captureAndAnalyze();
+        }
+      }, 2000);
+      setLiveMode(true);
+    }
   };
 
   return (
@@ -105,13 +118,24 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({
         className="rounded border border-slate-700 w-full max-w-md"
       />
       <canvas ref={canvasRef} className="hidden" />
-      <Button
-        onClick={captureAndAnalyze}
-        disabled={isAnalyzing}
-        className="bg-blue-600 hover:bg-blue-700 w-full"
-      >
-        {isAnalyzing ? "Analyzing..." : "Capture & Analyze"}
-      </Button>
+
+      <div className="flex gap-2 w-full max-w-md">
+        <Button
+          onClick={captureAndAnalyze}
+          disabled={isAnalyzing || liveMode}
+          className="bg-blue-600 hover:bg-blue-700 flex-1"
+        >
+          {isAnalyzing ? "Analyzing..." : "Capture PCB & Analyze"}
+        </Button>
+
+        <Button
+          onClick={toggleLiveMode}
+          variant={liveMode ? "destructive" : "default"}
+          className="flex-1"
+        >
+          {liveMode ? "Stop Live Detection" : "Start Live Detection"}
+        </Button>
+      </div>
     </div>
   );
 };

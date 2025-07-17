@@ -1,15 +1,20 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from ultralytics import YOLO
 from PIL import Image
-import shutil
+from .database import SessionLocal, engine
+from .models import Base, User
+import jwt
 import os
+import shutil
 import uuid
 
 app = FastAPI()
 
-# CORS
+# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -18,19 +23,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Model
+# --- Ensure tables are created ---
+Base.metadata.create_all(bind=engine)
+
+# --- Load JWT secret ---
+JWT_SECRET = os.getenv("JWT_SECRET", "defaultsecret")
+
+# --- Database Dependency ---
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# --- Pydantic Models ---
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+# --- Load ML Model ---
 MODEL_VERSION = "new_best.pt"
-model = YOLO(f"backend/models/{MODEL_VERSION}")
+MODEL_PATH = os.path.join("backend", "models", MODEL_VERSION)
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+
+model = YOLO(MODEL_PATH)
 
 REQUIRED_COMPONENTS = [
-    "Electrolytic Capacitor",
-    "IC",
-    "Inductor",
-    "Led",
-    "Pads",
-    "Pins",
-    "Resistor",
-    "Transistor"
+    "Electrolytic Capacitor", "IC", "Inductor", "Led",
+    "Pads", "Pins", "Resistor", "Transistor"
 ]
 
 def process_image(file: UploadFile, filename: str):
@@ -44,12 +71,10 @@ def process_image(file: UploadFile, filename: str):
     with Image.open(input_path) as img:
         original_width, original_height = img.size
 
-    # Clean previous predictions
     output_dir = "runs/detect/predict"
     if os.path.exists(output_dir):
         shutil.rmtree(output_dir)
 
-    # Inference
     results = model.predict(
         source=input_path,
         save=True,
@@ -86,20 +111,59 @@ def process_image(file: UploadFile, filename: str):
     })
 
 
-# 🌐 GET Root
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the PCB Fault Detector API"}
+    return {"message": "Welcome to the PCB Fault Detector & Auth API"}
 
 
-# 📥 Upload Image Endpoint
+@app.post("/register")
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.username).first()
+    if user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    new_user = User(username=request.username, password_hash=request.password, is_admin=False)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {"message": "User registered successfully"}
+
+
+@app.post("/login")
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.username).first()
+    if not user or user.password_hash != request.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token_data = {"username": user.username, "is_admin": user.is_admin}
+    token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
+
+    return {"access_token": token, "is_admin": user.is_admin}
+
+
+# ✅ New Admin Login Route
+@app.post("/admin-login")
+def admin_login(request: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.username).first()
+    if not user or user.password_hash != request.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="User is not an admin")
+
+    token_data = {"username": user.username, "is_admin": user.is_admin}
+    token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
+
+    return {"access_token": token, "is_admin": user.is_admin}
+
+
 @app.post("/predict/")
 async def predict(file: UploadFile = File(...)):
     filename = f"{uuid.uuid4().hex}_{file.filename}"
     return process_image(file, filename)
 
 
-# 🎥 Live Detection from Webcam Capture
 @app.post("/analyze-frame")
 async def analyze_frame(file: UploadFile = File(...)):
     filename = f"frame_{uuid.uuid4().hex}.jpg"
