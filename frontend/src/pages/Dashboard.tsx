@@ -23,6 +23,7 @@ interface Detection {
 const Dashboard = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [annotatedPreview, setAnnotatedPreview] = useState<string | null>(null);
   const [detectionResults, setDetectionResults] = useState<Detection[] | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [imageDims, setImageDims] = useState<{ width: number; height: number } | null>(null);
@@ -30,7 +31,7 @@ const Dashboard = () => {
   const [isFaulty, setIsFaulty] = useState<boolean | undefined>(undefined);
   const [missingComponents, setMissingComponents] = useState<string[]>([]);
 
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, token } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +43,7 @@ const Dashboard = () => {
   const handleImageUpload = (file: File, previewUrl: string) => {
     setUploadedFile(file);
     setImagePreview(previewUrl);
+    setAnnotatedPreview(null);
     setDetectionResults(null);
     setImageDims(null);
     setIsFaulty(undefined);
@@ -49,14 +51,17 @@ const Dashboard = () => {
   };
 
   const handleAnalyze = async () => {
-    if (!uploadedFile) return;
+    if (!uploadedFile || !token) return;
     setIsAnalyzing(true);
     const formData = new FormData();
     formData.append("file", uploadedFile);
 
     try {
-      const response = await fetch("http://localhost:8000/predict/", {
+      const response = await fetch("http://localhost:8000/upload_image/", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
@@ -68,6 +73,14 @@ const Dashboard = () => {
         width: result.original_width,
         height: result.original_height,
       });
+
+      if (result.annotated_image_path) {
+        const annotatedPath = `http://localhost:8000${result.annotated_image_path.replace(/\\/g, "/")}`;
+        setAnnotatedPreview(annotatedPath);
+      } else {
+        setAnnotatedPreview(imagePreview);
+      }
+
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -79,6 +92,7 @@ const Dashboard = () => {
     setMode(newMode);
     setUploadedFile(null);
     setImagePreview(null);
+    setAnnotatedPreview(null);
     setDetectionResults(null);
     setImageDims(null);
     setIsFaulty(undefined);
@@ -156,13 +170,25 @@ const Dashboard = () => {
                   <ImageUpload onImageUpload={handleImageUpload} />
                   {imagePreview && (
                     <div className="mt-6 space-y-6">
-                      <div className="flex justify-center">
-                        <img
-                          src={imagePreview}
-                          alt="Uploaded preview"
-                          style={{ width: "120px", height: "auto" }}
-                          className="rounded shadow border border-slate-700"
-                        />
+                      <div className="flex justify-center gap-4 flex-wrap">
+                        <div>
+                          <p className="text-slate-300 mb-1 text-center">Original Image</p>
+                          <img
+                            src={imagePreview}
+                            alt="Original Preview"
+                            className="rounded shadow border border-slate-700 w-40"
+                          />
+                        </div>
+                        {annotatedPreview && (
+                          <div>
+                            <p className="text-slate-300 mb-1 text-center">Annotated Image</p>
+                            <img
+                              src={annotatedPreview}
+                              alt="Annotated Preview"
+                              className="rounded shadow border border-slate-700 w-40"
+                            />
+                          </div>
+                        )}
                       </div>
                       <Button
                         onClick={handleAnalyze}
@@ -179,7 +205,6 @@ const Dashboard = () => {
                   onResults={(results, previewUrl, dims, isFaultyResult, missing) => {
                     setDetectionResults(results);
                     setImagePreview(previewUrl);
-                    setImageDims(dims);
                     setIsFaulty(isFaultyResult);
                     setMissingComponents(missing);
                   }}
@@ -203,7 +228,7 @@ const Dashboard = () => {
                 <DetectionResults
                   results={detectionResults}
                   isAnalyzing={isAnalyzing}
-                  imageUrl={imagePreview}
+                  imageUrl={annotatedPreview || imagePreview}
                   originalWidth={imageDims?.width}
                   originalHeight={imageDims?.height}
                   isFaulty={isFaulty}

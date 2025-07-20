@@ -6,16 +6,16 @@ import Login from "@/pages/Login";
 import AdminLogin from "@/pages/AdminLogin";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminImageHistory from "@/pages/AdminImageHistory";  // ✅ import
 
 const Router: React.FC = () => {
   const { token, isAdmin } = useContext(AuthContext);
 
   return (
     <Routes>
-      {/* Public Home page */}
       <Route path="/" element={<Home />} />
 
-      {/* User Dashboard - only for logged-in users who are NOT admins */}
       <Route
         path="/dashboard"
         element={
@@ -23,31 +23,37 @@ const Router: React.FC = () => {
         }
       />
 
-      {/* Admin Dashboard - only for logged-in admins */}
       <Route
         path="/admin-dashboard"
         element={
-          token && isAdmin ? <Dashboard /> : <Navigate to={token ? "/" : "/admin-login"} />
+          token && isAdmin ? <AdminDashboard /> : <Navigate to={token ? "/" : "/admin-login"} />
         }
       />
 
-      {/* User Login */}
+      {/* ✅ Admin Image History */}
+      <Route
+        path="/admin/image-history"
+        element={
+          token && isAdmin ? <AdminImageHistory /> : <Navigate to={token ? "/" : "/admin-login"} />
+        }
+      />
+
       <Route
         path="/login"
         element={token ? <Navigate to={isAdmin ? "/admin-dashboard" : "/dashboard"} /> : <Login />}
       />
 
-      {/* Admin Login */}
       <Route
         path="/admin-login"
         element={token ? <Navigate to={isAdmin ? "/admin-dashboard" : "/dashboard"} /> : <AdminLogin />}
       />
 
-      {/* Register */}
       <Route
         path="/register"
         element={token ? <Navigate to={isAdmin ? "/admin-dashboard" : "/dashboard"} /> : <Register />}
       />
+
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 };

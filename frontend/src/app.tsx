@@ -1,12 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Home from "@/pages/Home";
-import About from "@/pages/About";
 import Dashboard from "@/pages/Dashboard";
-import AdminPanel from "@/pages/AdminPanel";
 import Login from "@/pages/Login";
 import AdminLogin from "@/pages/AdminLogin";
 import Register from "@/pages/Register";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminImageHistory from "@/pages/AdminImageHistory";  // Import the new page
 
 function App() {
   return (
@@ -14,12 +14,12 @@ function App() {
       <Navbar />
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin-panel" element={<AdminPanel />} />
         <Route path="/login" element={<Login />} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />  {/* Admin Dashboard */}
+        <Route path="/admin/image-history" element={<AdminImageHistory />} /> {/* Image History */}
       </Routes>
     </Router>
   );

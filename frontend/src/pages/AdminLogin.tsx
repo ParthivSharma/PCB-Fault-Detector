@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { AuthContext } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const AdminLogin: React.FC = () => {
   const { login } = useContext(AuthContext);
@@ -15,7 +16,6 @@ const AdminLogin: React.FC = () => {
     setError("");
 
     try {
-      // Replace this URL with your admin login endpoint
       const response = await fetch("http://localhost:8000/admin-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -26,11 +26,10 @@ const AdminLogin: React.FC = () => {
 
       const data = await response.json();
 
-      // Assuming your backend returns an access_token and is_admin flag
-      login(data.access_token, data.is_admin);
+      // Force isAdmin to true
+      login(data.access_token, true);
+      navigate("/admin-dashboard");
 
-      // Redirect to admin panel/dashboard after successful login
-      navigate("/admin-panel");
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     }
@@ -39,9 +38,10 @@ const AdminLogin: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
       <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 w-full max-w-md space-y-5">
+
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-2">Admin Login</h1>
-          <p className="text-gray-400 text-sm">Login to access the admin panel</p>
+          <p className="text-gray-400 text-sm">Login to access the admin dashboard</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -49,7 +49,7 @@ const AdminLogin: React.FC = () => {
 
           <input
             type="text"
-            placeholder="Username"
+            placeholder="Admin Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
@@ -58,19 +58,19 @@ const AdminLogin: React.FC = () => {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Admin Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3 py-2 rounded bg-slate-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
             required
           />
 
-          <button
+          <Button
             type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white font-semibold py-2 rounded-lg hover:brightness-110 transition"
+            className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white font-semibold py-2 rounded-lg hover:brightness-110 transition"
           >
-            Login
-          </button>
+            Admin Login
+          </Button>
         </form>
       </div>
     </div>

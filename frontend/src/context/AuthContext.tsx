@@ -2,7 +2,8 @@ import React, {
   createContext,
   useState,
   ReactNode,
-  useContext
+  useContext,
+  useEffect,
 } from "react";
 
 interface AuthContextType {
@@ -25,19 +26,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
   const [isAdmin, setIsAdmin] = useState<boolean>(localStorage.getItem("isAdmin") === "true");
 
-  const login = (newToken: string, isAdmin: boolean) => {
+  const login = (newToken: string, isAdminStatus: boolean): void => {
     setToken(newToken);
-    setIsAdmin(isAdmin);
+    setIsAdmin(isAdminStatus);
     localStorage.setItem("token", newToken);
-    localStorage.setItem("isAdmin", isAdmin.toString());
+    localStorage.setItem("isAdmin", isAdminStatus.toString());
   };
 
-  const logout = () => {
+  const logout = (): void => {
     setToken(null);
     setIsAdmin(false);
     localStorage.removeItem("token");
     localStorage.removeItem("isAdmin");
+    window.location.href = "/";
   };
+
+  useEffect(() => {
+    const handleUnload = () => logout();
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, []);
 
   const isAuthenticated = !!token;
 
@@ -48,5 +57,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Custom hook to access the AuthContext
 export const useAuth = () => useContext(AuthContext);
