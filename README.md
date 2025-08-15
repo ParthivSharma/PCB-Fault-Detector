@@ -41,7 +41,7 @@ PCB-Fault-Detector/
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-link>
+git clone https://github.com/ParthivSharma/PCB-Fault-Detector
 cd PCB-Fault-Detector
 ```
 
